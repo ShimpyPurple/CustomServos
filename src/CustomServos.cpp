@@ -6,10 +6,6 @@ ServoManager::ServoManager( uint8_t timer ):
     ocrb8ExtraByte( 0 ) ,
     numServos( 0 )
 {
-    Serial.print( "Starting Servo Manager @" );
-    Serial.print( (uint16_t)this , HEX );
-    Serial.println( "..." );
-    
     servos = new Servo*[0];
     
     switch ( timer ) {
@@ -42,29 +38,31 @@ ServoManager::ServoManager( uint8_t timer ):
             break;
         case TIMER_8_BIT_ASYNC:
             this->timer->setMode( NORMAL );
-            this->timer->setClockSource( CLOCK_8 );
-            ocra8ExtraByte = ( 40000>>8 );
-            // this->timer->setOutputCompareA( 40000 & 0xFF );
+            this->timer->setClockSource( CLOCK_64 );
+            ocra8ExtraByte = ( 5000>>8 );
+            this->timer->setOutputCompareA( 5000 & 0xFF );
+            ocrb8ExtraByte = ( 0xFF );
+            this->timer->setOutputCompareB( 0xFF );
+            this->timer->attachInterrupt( COMPARE_MATCH_A , timer8CompA , this );
+            this->timer->attachInterrupt( COMPARE_MATCH_B , timer8CompB , this );
+            this->timer->attachInterrupt( OVERFLOW , timer8Overflow , this );
             break;
     }
-    
-    Serial.println( "Servo Manager initialization done" );
+}
+
+void ServoManager::kill() {
+    if ( timerReserved ) {
+        timer->release();
+    }
 }
 
 void ServoManager::write( uint8_t pin , float percent ) {
-    Serial.print( "Writing " );
-    Serial.print( percent );
-    Serial.print( "% to pin " );
-    Serial.println( pin );
-    
     for ( uint8_t i=0 ; i<numServos ; ++i ) {
         if ( servos[i]->pin == pin ) {
             servos[i]->ocrb = percent/100*500 + 150;
             return;
         }
     }
-    
-    Serial.println( "Pin not found. Adding..." );
     
     if ( numServos == 100 ) return; // Thats too many. stopit.
     Servo **oldServos = servos;
@@ -76,16 +74,6 @@ void ServoManager::write( uint8_t pin , float percent ) {
     servos[ numServos-1 ] = new Servo( pin , percent/100*500 + 150 );
     pinMode( pin , OUTPUT );
     delete[] oldServos;
-    
-    Serial.print( "Number of servos increased to " );
-    Serial.println( numServos );
-    for ( uint8_t i=0 ; i<numServos ; ++i ) {
-        Serial.print( "  Pin: " );
-        Serial.print( servos[i]->pin );
-        Serial.print( "  OCRB: " );
-        Serial.println( servos[i]->ocrb );
-    }
-    
 }
 
 void ServoManager::remove( uint8_t pin ) {
@@ -116,18 +104,14 @@ void ServoManager::remove( uint8_t pin ) {
 static void ServoManager::timer16CompA( void *object ) {
     ServoManager *sm = ( ServoManager* )( object );
     
-    for ( uint8_t i=0 ; i<sm->numServos ; ++i ) {
-        digitalWrite( sm->servos[i]->pin , HIGH );
-    }
-    
     uint16_t next = UINT16_MAX;
     for ( uint8_t i=0 ; i<sm->numServos ; ++i ) {
+        digitalWrite( sm->servos[i]->pin , HIGH );
         if ( sm->servos[i]->ocrb < next ) {
             next = sm->servos[i]->ocrb;
         }
     }
     sm->timer->setOutputCompareB( next );
-	
 }
 
 static void ServoManager::timer16CompB( void *object ) {
@@ -145,4 +129,49 @@ static void ServoManager::timer16CompB( void *object ) {
         }
     }
     sm->timer->setOutputCompareB( next );
+}
+
+static void ServoManager::timer8CompA( void *object ) {
+    ServoManager *sm = ( ServoManager* )( object );
+    
+    if ( sm->tcnt8ExtraByte != sm->ocra8ExtraByte ) return;
+    
+    uint16_t next = UINT16_MAX;
+    for ( uint8_t i=0 ; i<sm->numServos ; ++i ) {
+        digitalWrite( sm->servos[i]->pin , HIGH );
+        if ( sm->servos[i]->ocrb < next ) {
+            next = sm->servos[i]->ocrb;
+        }
+    }
+    
+    sm->ocrb8ExtraByte = ( next>>8 );
+    sm->timer->setOutputCompareB( next & 0xFF );
+    
+    sm->tcnt8ExtraByte = 0;
+    sm->timer->setCounter( 0 );
+}
+
+static void ServoManager::timer8CompB( void *object ) {
+    ServoManager *sm = ( ServoManager* )( object );
+    
+    if ( sm->tcnt8ExtraByte != sm->ocrb8ExtraByte ) return;
+    
+    uint16_t tcnt = sm->timer->getCounter() | ( (uint16_t)(sm->tcnt8ExtraByte) << 8 );
+    uint16_t next = UINT16_MAX;
+    
+    for ( uint8_t i=0 ; i<sm->numServos ; ++i ) {
+        if ( tcnt - sm->servos[i]->ocrb < 20 ) {
+            digitalWrite( sm->servos[i]->pin , LOW );
+        }
+        if ( (sm->servos[i]->ocrb > tcnt) && (sm->servos[i]->ocrb < next) ) {
+            next = sm->servos[i]->ocrb;
+        }
+    }
+    
+    sm->ocrb8ExtraByte = ( next>>8 );
+    sm->timer->setOutputCompareB( next );
+}
+
+static void ServoManager::timer8Overflow( void *object ) {
+    ( (ServoManager*)(object) )->tcnt8ExtraByte += 1;
 }
