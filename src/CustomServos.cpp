@@ -34,8 +34,8 @@ ServoManager::ServoManager( uint8_t timer ):
     switch( this->timer->getTimerType() ) {
         case TIMER_16_BIT:
             this->timer->setMode( CTC_OCA );
-            this->timer->setClockSource( CLOCK_1024 );
-            this->timer->setOutputCompareA( 40000 );
+            this->timer->setClockSource( CLOCK_64 );
+            this->timer->setOutputCompareA( 5000 );
             this->timer->setOutputCompareB( UINT16_MAX );
             this->timer->attachInterrupt( COMPARE_MATCH_A , timer16CompA , this );
             this->timer->attachInterrupt( COMPARE_MATCH_B , timer16CompB , this );
@@ -59,21 +59,21 @@ void ServoManager::write( uint8_t pin , float percent ) {
     
     for ( uint8_t i=0 ; i<numServos ; ++i ) {
         if ( servos[i]->pin == pin ) {
-            servos[i]->ocrb = percent/100*2000 + 2000;
+            servos[i]->ocrb = percent/100*500 + 150;
             return;
         }
     }
     
     Serial.println( "Pin not found. Adding..." );
     
-    if ( numServos == 254 ) return; // Thats too many. stopit.
+    if ( numServos == 100 ) return; // Thats too many. stopit.
     Servo **oldServos = servos;
     numServos += 1;
     servos = new Servo*[numServos];
     for ( uint8_t i=0 ; i<numServos-1 ; ++i ) {
         servos[i] = oldServos[i];
     }
-    servos[ numServos-1 ] = new Servo( pin , percent/100*2000 + 2000 );
+    servos[ numServos-1 ] = new Servo( pin , percent/100*500 + 150 );
     pinMode( pin , OUTPUT );
     delete[] oldServos;
     
@@ -116,8 +116,6 @@ void ServoManager::remove( uint8_t pin ) {
 static void ServoManager::timer16CompA( void *object ) {
     ServoManager *sm = ( ServoManager* )( object );
     
-    digitalWrite( sm->servos[0]->pin , LOW );
-    
     for ( uint8_t i=0 ; i<sm->numServos ; ++i ) {
         digitalWrite( sm->servos[i]->pin , HIGH );
     }
@@ -129,7 +127,7 @@ static void ServoManager::timer16CompA( void *object ) {
         }
     }
     sm->timer->setOutputCompareB( next );
-    
+	
 }
 
 static void ServoManager::timer16CompB( void *object ) {
@@ -139,7 +137,7 @@ static void ServoManager::timer16CompB( void *object ) {
     uint16_t next = UINT16_MAX;
     
     for ( uint8_t i=0 ; i<sm->numServos ; ++i ) {
-        if ( sm->servos[i]->ocrb == tcnt ) {
+        if ( tcnt - sm->servos[i]->ocrb < 20 ) {
             digitalWrite( sm->servos[i]->pin , LOW );
         }
         if ( (sm->servos[i]->ocrb > tcnt) && (sm->servos[i]->ocrb < next) ) {
