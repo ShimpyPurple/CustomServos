@@ -1,6 +1,7 @@
 #include "CustomServos.h"
 
 ServoManager::ServoManager( uint8_t timer ):
+    servos( new Servo*[0] ) ,
     tcnt8ExtraByte( 0 ) ,
     ocra8ExtraByte( 0 ) ,
     ocrb8ExtraByte( 0 ) ,
@@ -19,6 +20,7 @@ ServoManager::ServoManager( uint8_t timer ):
 }
 
 ServoManager::ServoManager( BaseTimer16 *timer16 ):
+    servos( new Servo*[0] ) ,
     timer( new GenericTimer(timer16) ) ,
     tcnt8ExtraByte( 0 ) ,
     ocra8ExtraByte( 0 ) ,
@@ -27,6 +29,7 @@ ServoManager::ServoManager( BaseTimer16 *timer16 ):
 {}
 
 ServoManager::ServoManager( BaseTimer8Async *timer8 ):
+    servos( new Servo*[0] ) ,
     timer( new GenericTimer(timer8) ) ,
     tcnt8ExtraByte( 0 ) ,
     ocra8ExtraByte( 0 ) ,
@@ -35,6 +38,7 @@ ServoManager::ServoManager( BaseTimer8Async *timer8 ):
 {}
 
 ServoManager::ServoManager( GenericTimer *timer ):
+    servos( new Servo*[0] ) ,
     timer( timer ) ,
     tcnt8ExtraByte( 0 ) ,
     ocra8ExtraByte( 0 ) ,
@@ -43,8 +47,6 @@ ServoManager::ServoManager( GenericTimer *timer ):
 {}
 
 void ServoManager::begin() {
-    servos = new Servo*[0];
-    
     if ( timer->isFree() ) {
         timer->reserve();
         timerReserved = true;
