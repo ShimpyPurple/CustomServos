@@ -17,11 +17,16 @@ struct Servo {
 class ServoManager {
     public:
         ServoManager( uint8_t timer );
+        ServoManager( BaseTimer16 *timer16 );
+        ServoManager( BaseTimer8Async *timer8 );
+        ServoManager( GenericTimer *timer );
         void kill();
         void write( uint8_t pin , float percent );
         void remove( uint8_t pin );
     
     private:
+        void init();
+    
         uint8_t numServos;
         Servo **servos;
         

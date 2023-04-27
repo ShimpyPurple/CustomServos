@@ -6,8 +6,6 @@ ServoManager::ServoManager( uint8_t timer ):
     ocrb8ExtraByte( 0 ) ,
     numServos( 0 )
 {
-    servos = new Servo*[0];
-    
     switch ( timer ) {
         case TIMER_1: this->timer = new GenericTimer( &Timer1 ); break;
         case TIMER_2: this->timer = new GenericTimer( &Timer2 ); break;
@@ -18,6 +16,44 @@ ServoManager::ServoManager( uint8_t timer ):
 #endif
         default: timerReserved = false; return;
     }
+    
+    init();
+}
+
+ServoManager::ServoManager( BaseTimer16 *timer16 ):
+    tcnt8ExtraByte( 0 ) ,
+    ocra8ExtraByte( 0 ) ,
+    ocrb8ExtraByte( 0 ) ,
+    numServos( 0 )
+{
+    timer = new GenericTimer( timer16 );
+    
+    init();
+}
+
+ServoManager::ServoManager( BaseTimer8Async *timer8 ):
+    tcnt8ExtraByte( 0 ) ,
+    ocra8ExtraByte( 0 ) ,
+    ocrb8ExtraByte( 0 ) ,
+    numServos( 0 )
+{
+    timer = new GenericTimer( timer8 );
+    
+    init();
+}
+
+ServoManager::ServoManager( GenericTimer *timer ):
+    timer( timer ) ,
+    tcnt8ExtraByte( 0 ) ,
+    ocra8ExtraByte( 0 ) ,
+    ocrb8ExtraByte( 0 ) ,
+    numServos( 0 )
+{
+    init();
+}
+
+void ServoManager::init() {
+    servos = new Servo*[0];
     
     if ( this->timer->isFree() ) {
         this->timer->reserve();
