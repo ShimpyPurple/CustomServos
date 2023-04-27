@@ -93,6 +93,9 @@ void ServoManager::kill() {
 }
 
 void ServoManager::write( uint8_t pin , float percent ) {
+    if ( percent > 100 ) percent = 100;
+    if ( percent < 0 ) percent = 0;
+    
     for ( uint8_t i=0 ; i<numServos ; ++i ) {
         if ( servos[i]->pin == pin ) {
             servos[i]->ocrb = percent/100*500 + 150;
