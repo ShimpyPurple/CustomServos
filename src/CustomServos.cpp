@@ -1,81 +1,56 @@
 #include "CustomServos.h"
 
 ServoManager::ServoManager( uint8_t timer ):
-    servos( new Servo*[0] ) ,
-    tcnt8ExtraByte( 0 ) ,
-    ocra8ExtraByte( 0 ) ,
-    ocrb8ExtraByte( 0 ) ,
-    numServos( 0 )
+    numServos( 0 ) ,
+    servos( new Servo*[0] )
 {
     switch ( timer ) {
         case TIMER_1: this->timer = new GenericTimer( &Timer1 ); break;
-        case TIMER_2: this->timer = new GenericTimer( &Timer2 ); break;
+        case TIMER_2: this->timer = new GenericTimer( &Timer2 , true ); break;
 #if defined( __AVR_ATmega2560__ )
         case TIMER_3: this->timer = new GenericTimer( &Timer3 ); break;
         case TIMER_4: this->timer = new GenericTimer( &Timer4 ); break;
         case TIMER_5: this->timer = new GenericTimer( &Timer5 ); break;
 #endif
-        default: timerReserved = false; return;
+        default: noTimer = true; break;
     }
 }
 
 ServoManager::ServoManager( BaseTimer16 *timer16 ):
+    numServos( 0 ) ,
     servos( new Servo*[0] ) ,
     timer( new GenericTimer(timer16) ) ,
-    tcnt8ExtraByte( 0 ) ,
-    ocra8ExtraByte( 0 ) ,
-    ocrb8ExtraByte( 0 ) ,
-    numServos( 0 )
+    noTimer( false )
 {}
 
 ServoManager::ServoManager( BaseTimer8Async *timer8 ):
+    numServos( 0 ) ,
     servos( new Servo*[0] ) ,
-    timer( new GenericTimer(timer8) ) ,
-    tcnt8ExtraByte( 0 ) ,
-    ocra8ExtraByte( 0 ) ,
-    ocrb8ExtraByte( 0 ) ,
-    numServos( 0 )
+    timer( new GenericTimer(timer8 , true) ) ,
+    noTimer( false )
 {}
 
 ServoManager::ServoManager( GenericTimer *timer ):
+    numServos( 0 ) ,
     servos( new Servo*[0] ) ,
     timer( timer ) ,
-    tcnt8ExtraByte( 0 ) ,
-    ocra8ExtraByte( 0 ) ,
-    ocrb8ExtraByte( 0 ) ,
-    numServos( 0 )
+    noTimer( false )
 {}
 
 void ServoManager::begin() {
-    if ( timer->isFree() ) {
-        timer->reserve();
+    if ( !noTimer && timer->reserve() ) {
         timerReserved = true;
     } else {
         timerReserved = false;
         return;
     }
     
-    switch( timer->getTimerType() ) {
-        case TIMER_16_BIT:
-            timer->setMode( CTC_OCA );
-            timer->setClockSource( CLOCK_256 );
-            timer->setOutputCompareA( 1250 );
-            timer->setOutputCompareB( UINT16_MAX );
-            timer->attachInterrupt( COMPARE_MATCH_A , timer16CompA , this );
-            timer->attachInterrupt( COMPARE_MATCH_B , timer16CompB , this );
-            break;
-        case TIMER_8_BIT_ASYNC:
-            timer->setMode( NORMAL );
-            timer->setClockSource( CLOCK_256 );
-            ocra8ExtraByte = ( 1250>>8 );
-            timer->setOutputCompareA( 1250 & 0xFF );
-            ocrb8ExtraByte = ( 0xFF );
-            timer->setOutputCompareB( 0xFF );
-            timer->attachInterrupt( COMPARE_MATCH_A , timer8CompA , this );
-            timer->attachInterrupt( COMPARE_MATCH_B , timer8CompB , this );
-            timer->attachInterrupt( OVERFLOW , timer8Overflow , this );
-            break;
-    }
+    timer->setMode( CTC_OCA );
+    timer->setClockSource( CLOCK_256 );
+    timer->setOutputCompareA( 1250 );
+    timer->setOutputCompareB( UINT16_MAX );
+    timer->attachInterrupt( COMPARE_MATCH_A , compAISR , this );
+    timer->attachInterrupt( COMPARE_MATCH_B , compBISR , this );
 }
 
 void ServoManager::kill() {
@@ -132,7 +107,7 @@ void ServoManager::remove( uint8_t pin ) {
     delete[] oldServos;
 }
 
-static void ServoManager::timer16CompA( void *object ) {
+static void ServoManager::compAISR( void *object ) {
     ServoManager *sm = ( ServoManager* )( object );
     
     uint16_t next = UINT16_MAX;
@@ -145,7 +120,7 @@ static void ServoManager::timer16CompA( void *object ) {
     sm->timer->setOutputCompareB( next );
 }
 
-static void ServoManager::timer16CompB( void *object ) {
+static void ServoManager::compBISR( void *object ) {
     ServoManager *sm = ( ServoManager* )( object );
     
     uint16_t tcnt = sm->timer->getCounter();
@@ -160,49 +135,4 @@ static void ServoManager::timer16CompB( void *object ) {
         }
     }
     sm->timer->setOutputCompareB( next );
-}
-
-static void ServoManager::timer8CompA( void *object ) {
-    ServoManager *sm = ( ServoManager* )( object );
-    
-    if ( sm->tcnt8ExtraByte != sm->ocra8ExtraByte ) return;
-    
-    uint16_t next = UINT16_MAX;
-    for ( uint8_t i=0 ; i<sm->numServos ; ++i ) {
-        digitalWrite( sm->servos[i]->pin , HIGH );
-        if ( sm->servos[i]->ocrb < next ) {
-            next = sm->servos[i]->ocrb;
-        }
-    }
-    
-    sm->ocrb8ExtraByte = ( next>>8 );
-    sm->timer->setOutputCompareB( next & 0xFF );
-    
-    sm->tcnt8ExtraByte = 0;
-    sm->timer->setCounter( 0 );
-}
-
-static void ServoManager::timer8CompB( void *object ) {
-    ServoManager *sm = ( ServoManager* )( object );
-    
-    if ( sm->tcnt8ExtraByte != sm->ocrb8ExtraByte ) return;
-    
-    uint16_t tcnt = sm->timer->getCounter() | ( (uint16_t)(sm->tcnt8ExtraByte) << 8 );
-    uint16_t next = UINT16_MAX;
-    
-    for ( uint8_t i=0 ; i<sm->numServos ; ++i ) {
-        if ( tcnt - sm->servos[i]->ocrb < 20 ) {
-            digitalWrite( sm->servos[i]->pin , LOW );
-        }
-        if ( (sm->servos[i]->ocrb > tcnt) && (sm->servos[i]->ocrb < next) ) {
-            next = sm->servos[i]->ocrb;
-        }
-    }
-    
-    sm->ocrb8ExtraByte = ( next>>8 );
-    sm->timer->setOutputCompareB( next );
-}
-
-static void ServoManager::timer8Overflow( void *object ) {
-    ( (ServoManager*)(object) )->tcnt8ExtraByte += 1;
 }

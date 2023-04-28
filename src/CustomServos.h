@@ -28,18 +28,11 @@ class ServoManager {
     private:
         uint8_t numServos;
         Servo **servos;
-        
         GenericTimer *timer;
+        bool noTimer;
         bool timerReserved;
-        volatile uint8_t tcnt8ExtraByte;
-        volatile uint8_t ocra8ExtraByte;
-        volatile uint8_t ocrb8ExtraByte;
-        
-        static void timer16CompA( void *object );
-        static void timer16CompB( void *object );
-        static void timer8CompA( void *object );
-        static void timer8CompB( void *object );
-        static void timer8Overflow( void *object );
+        static void compAISR( void *object );
+        static void compBISR( void *object );
     
 };
 
