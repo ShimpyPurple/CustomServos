@@ -20,27 +20,19 @@ class ServoManager {
         ServoManager( BaseTimer16 *timer16 );
         ServoManager( BaseTimer8Async *timer8 );
         ServoManager( GenericTimer *timer );
+        void begin();
         void kill();
         void write( uint8_t pin , float percent );
         void remove( uint8_t pin );
     
     private:
-        void init();
-    
+        bool began;
         uint8_t numServos;
         Servo **servos;
-        
         GenericTimer *timer;
         bool timerReserved;
-        volatile uint8_t tcnt8ExtraByte;
-        volatile uint8_t ocra8ExtraByte;
-        volatile uint8_t ocrb8ExtraByte;
-        
-        static void timer16CompA( void *object );
-        static void timer16CompB( void *object );
-        static void timer8CompA( void *object );
-        static void timer8CompB( void *object );
-        static void timer8Overflow( void *object );
+        static void compAISR( void *object );
+        static void compBISR( void *object );
     
 };
 
