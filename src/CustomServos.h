@@ -27,8 +27,14 @@ class ServoManager {
     
     private:
         bool began;
+        
         uint8_t numServos;
         Servo **servos;
+        uint8_t numToAdd;
+        Servo **toAdd;
+        uint8_t numToRemove;
+        uint8_t *toRemove;
+        
         GenericTimer *timer;
         bool timerReserved;
         static void compAISR( void *object );
