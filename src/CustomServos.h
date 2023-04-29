@@ -26,10 +26,10 @@ class ServoManager {
         void remove( uint8_t pin );
     
     private:
+        bool began;
         uint8_t numServos;
         Servo **servos;
         GenericTimer *timer;
-        bool noTimer;
         bool timerReserved;
         static void compAISR( void *object );
         static void compBISR( void *object );

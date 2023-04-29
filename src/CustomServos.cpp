@@ -1,44 +1,37 @@
 #include "CustomServos.h"
 
 ServoManager::ServoManager( uint8_t timer ):
-    numServos( 0 ) ,
-    servos( new Servo*[0] )
-{
-    switch ( timer ) {
-        case TIMER_1: this->timer = new GenericTimer( &Timer1 ); break;
-        case TIMER_2: this->timer = new GenericTimer( &Timer2 , true ); break;
-#if defined( __AVR_ATmega2560__ )
-        case TIMER_3: this->timer = new GenericTimer( &Timer3 ); break;
-        case TIMER_4: this->timer = new GenericTimer( &Timer4 ); break;
-        case TIMER_5: this->timer = new GenericTimer( &Timer5 ); break;
-#endif
-        default: noTimer = true; break;
-    }
-}
-
-ServoManager::ServoManager( BaseTimer16 *timer16 ):
+    began( false ) ,
     numServos( 0 ) ,
     servos( new Servo*[0] ) ,
-    timer( new GenericTimer(timer16) ) ,
-    noTimer( false )
+    timer( new GenericTimer(timer) )
+{}
+
+ServoManager::ServoManager( BaseTimer16 *timer16 ):
+    began( false ) ,
+    numServos( 0 ) ,
+    servos( new Servo*[0] ) ,
+    timer( new GenericTimer(timer16) )
 {}
 
 ServoManager::ServoManager( BaseTimer8Async *timer8 ):
+    began( false ) ,
     numServos( 0 ) ,
     servos( new Servo*[0] ) ,
-    timer( new GenericTimer(timer8 , true) ) ,
-    noTimer( false )
+    timer( new GenericTimer(timer8 , true) )
 {}
 
 ServoManager::ServoManager( GenericTimer *timer ):
+    began( false ) ,
     numServos( 0 ) ,
     servos( new Servo*[0] ) ,
-    timer( timer ) ,
-    noTimer( false )
+    timer( timer )
 {}
 
 void ServoManager::begin() {
-    if ( !noTimer && timer->reserve() ) {
+    began = true;
+    
+    if ( timer->reserve() ) {
         timerReserved = true;
     } else {
         timerReserved = false;
@@ -62,6 +55,8 @@ void ServoManager::kill() {
 void ServoManager::write( uint8_t pin , float percent ) {
     if ( percent > 100 ) percent = 100;
     if ( percent < 0 ) percent = 0;
+    
+    if ( !began ) begin();
     
     for ( uint8_t i=0 ; i<numServos ; ++i ) {
         if ( servos[i]->pin == pin ) {
