@@ -2,7 +2,7 @@
 
 ServoManager::ServoManager( uint8_t timer ):
     begun( false ) ,
-    timer( new GenericTimer(timer) ) ,
+    timer( new GenericTimer(timer , true) ) ,
     cycleIndex( 0 )
 {}
 
@@ -36,12 +36,11 @@ void ServoManager::begin() {
     
     timer->setMode( NORMAL );
     timer->setCounter( 0 );
-    timer->setOutputCompareA( 0xFF );
+    timer->setOutputCompareA( 0 );
     timer->setOutputCompareB( 0xFF );
     timer->attachInterrupt( COMPARE_MATCH_A , compAISR , this );
     timer->attachInterrupt( COMPARE_MATCH_B , compBISR , this );
     timer->setClockSource( CLOCK_8 );
-    compAISR( this );
 }
 
 void ServoManager::kill() {
