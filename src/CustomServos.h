@@ -20,21 +20,16 @@ class ServoManager {
         ServoManager( BaseTimer8Async *timer8 );
         ServoManager( GenericTimer *timer );
         void begin();
-        void kill();
         void write( uint8_t pin , float percent );
         void remove( uint8_t pin );
         
     
     private:
         bool begun;
-        
         GenericTimer *timer;
-        bool timerReserved;
-        
         uint8_t cycleIndex;
         uint8_t pins[MAX_SERVOS];
         uint16_t durrations[MAX_SERVOS] = { 0 };
-        
         static void compAISR( void *object );
         static void compBISR( void *object );
     

@@ -26,14 +26,7 @@ ServoManager::ServoManager( GenericTimer *timer ):
 
 void ServoManager::begin() {
     begun = true;
-    
-    if ( timer->reserve() ) {
-        timerReserved = true;
-    } else {
-        timerReserved = false;
-        return;
-    }
-    
+   
     timer->setMode( NORMAL );
     timer->setCounter( 0 );
     timer->setOutputCompareA( 0 );
@@ -41,15 +34,6 @@ void ServoManager::begin() {
     timer->attachInterrupt( COMPARE_MATCH_A , compAISR , this );
     timer->attachInterrupt( COMPARE_MATCH_B , compBISR , this );
     timer->setClockSource( CLOCK_8 );
-}
-
-void ServoManager::kill() {
-    if ( timerReserved ) {
-        timer->release();
-    }
-    for ( uint8_t i=0 ; i<MAX_SERVOS ; ++i ) {
-        durrations[i] = 0;
-    }
 }
 
 void ServoManager::write( uint8_t pin , float percent ) {
