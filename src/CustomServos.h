@@ -8,11 +8,10 @@
 #warning "CustomServos is only tested for ATmega328P and ATmega2560"
 #endif
 
-struct Servo {
-    uint8_t pin;
-    uint16_t ocrb;
-    Servo( uint8_t pin , uint16_t ocrb ): pin( pin ) , ocrb( ocrb ) {}
-};
+#define MAX_SERVOS 12
+#define MIN_PULSE 1000
+#define MAX_PULSE 5000
+#define CYCLE_LENGTH 5100
 
 class ServoManager {
     public:
@@ -24,12 +23,18 @@ class ServoManager {
         void kill();
         void write( uint8_t pin , float percent );
         void remove( uint8_t pin );
+        
     
     private:
-        bool began;
+        bool begun;
         
         GenericTimer *timer;
         bool timerReserved;
+        
+        uint8_t cycleIndex;
+        uint8_t pins[MAX_SERVOS];
+        uint16_t durrations[MAX_SERVOS] = { 0 };
+        
         static void compAISR( void *object );
         static void compBISR( void *object );
     
