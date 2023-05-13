@@ -27,7 +27,7 @@ ServoManager::ServoManager( GenericTimer *timer ):
 void ServoManager::begin() {
     begun = true;
    
-    timer->setMode( NORMAL );
+    timer->setMode( WGM_NORMAL );
     timer->setCounter( 0 );
     timer->setOutputCompareA( 0 );
     timer->setOutputCompareB( 0xFF );
