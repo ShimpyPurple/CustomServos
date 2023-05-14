@@ -11,7 +11,11 @@
 #define MAX_SERVOS 12
 #define MIN_PULSE 1000
 #define MAX_PULSE 5000
-#define CYCLE_LENGTH 5100
+#define CYCLE_MARGIN 100
+
+#if ( MAX_PULSE + CYCLE_MARGIN ) * MAX_SERVOS > UINT16_MAX
+#error ( MAX_PULSE + CYCLE_MARGIN ) * MAX_SERVOS **must** be <= UINT16_MAX
+#endif
 
 class ServoManager {
     public:
@@ -21,13 +25,16 @@ class ServoManager {
         ServoManager( GenericTimer *timer );
         void begin();
         void write( uint8_t pin , float percent );
+        void writeMicros( uint8_t pin , uint16_t us );
+        void writeTicks( uint8_t pin , uint16_t ticks );
         void remove( uint8_t pin );
         
     
     private:
-        bool begun;
         GenericTimer *timer;
         uint8_t cycleIndex;
+        uint16_t minMicros;
+        uint16_t maxMicros;
         uint8_t pins[MAX_SERVOS];
         uint16_t durrations[MAX_SERVOS] = { 0 };
         static void compAISR( void *object );
