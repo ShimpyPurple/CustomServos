@@ -8,7 +8,7 @@
 #warning "CustomServos is only tested for ATmega328P and ATmega2560"
 #endif
 
-#define MAX_SERVOS 12
+#define MAX_SERVOS 10
 #define MIN_PULSE 1000
 #define MAX_PULSE 5000
 #define CYCLE_MARGIN 100
