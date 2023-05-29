@@ -1,5 +1,13 @@
 #include "CustomServos.h"
 
+#define MIN_PULSE 1000
+#define MAX_PULSE 5000
+#define CYCLE_MARGIN 100
+
+#if ( MAX_PULSE + CYCLE_MARGIN ) * MAX_SERVOS > UINT16_MAX
+#error ( MAX_PULSE + CYCLE_MARGIN ) * MAX_SERVOS **must** be <= UINT16_MAX
+#endif
+
 ServoManager::ServoManager( uint8_t timer ):
     timer( new GenericTimer(timer , true) ) ,
     cycleIndex( 0 )
@@ -78,7 +86,7 @@ void ServoManager::remove( uint8_t pin ) {
     }
 }
 
-static void ServoManager::compAISR( void *object ) {
+void ServoManager::compAISR( void *object ) {
     ServoManager *sm = ( ServoManager* )( object );
     
     if ( sm->cycleIndex == MAX_SERVOS-1 ) {
@@ -95,7 +103,7 @@ static void ServoManager::compAISR( void *object ) {
     }
 }
 
-static void ServoManager::compBISR( void *object ) {
+void ServoManager::compBISR( void *object ) {
     ServoManager *sm = ( ServoManager* )( object );
     
     if ( sm->durrations[sm->cycleIndex] != 0 ) {
