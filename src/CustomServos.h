@@ -9,13 +9,6 @@
 #endif
 
 #define MAX_SERVOS 10
-#define MIN_PULSE 1000
-#define MAX_PULSE 5000
-#define CYCLE_MARGIN 100
-
-#if ( MAX_PULSE + CYCLE_MARGIN ) * MAX_SERVOS > UINT16_MAX
-#error ( MAX_PULSE + CYCLE_MARGIN ) * MAX_SERVOS **must** be <= UINT16_MAX
-#endif
 
 class ServoManager {
     public:
